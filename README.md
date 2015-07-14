@@ -1,4 +1,4 @@
 # level-atomics
 
-Atomic operators for leveldb
+Atomic operators for LevelDB.
 

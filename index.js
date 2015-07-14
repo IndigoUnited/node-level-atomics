@@ -57,7 +57,45 @@ kvOps.counter = function (keys, delta, options, callback) {
 // };
 
 kvOps.insert = function (tuples, options, callback) {
+    if (typeof options === 'function') {
+        callback = options;
+        options  = {};
+    }
 
+    var tasks = {};
+
+    _array(Object.keys(tuples)).forEach(function (key) {
+        tasks[key] = __lockAndGet.bind(null, this, key, options, function __handle(value, callback) {
+            // if value already exists, insert fails
+            if (value !== undefined) {
+                return callback(null, true); // key already existed
+            }
+
+            this.put(key, tuples[key], options, function __handlePut(err) {
+                if (err) {
+                    return callback(err);
+                }
+
+                return callback(null, false); // key did not exist
+            });
+        }.bind(this));
+    }.bind(this));
+
+    async.parallel(tasks, function (err, res) {
+        if (err) {
+            return callback(err);
+        }
+
+        var existing = [];
+
+        for (var k in res) {
+            if (res[k]) {
+                existing.push(k);
+            }
+        }
+
+        return callback(null, existing);
+    });
 };
 
 // kvOps.prepend = function (keys, fragment, callback) {
@@ -65,7 +103,45 @@ kvOps.insert = function (tuples, options, callback) {
 // };
 
 kvOps.replace = function (tuples, options, callback) {
+    if (typeof options === 'function') {
+        callback = options;
+        options  = {};
+    }
 
+    var tasks = {};
+
+    _array(Object.keys(tuples)).forEach(function (key) {
+        tasks[key] = __lockAndGet.bind(null, this, key, options, function __handle(value, callback) {
+            // if value does not exist, replace fails
+            if (value === undefined) {
+                return callback(null, true); // key missing
+            }
+
+            this.put(key, tuples[key], options, function __handlePut(err) {
+                if (err) {
+                    return callback(err);
+                }
+
+                return callback(null, false); // key existed
+            });
+        }.bind(this));
+    }.bind(this));
+
+    async.parallel(tasks, function (err, res) {
+        if (err) {
+            return callback(err);
+        }
+
+        var existing = [];
+
+        for (var k in res) {
+            if (res[k]) {
+                existing.push(k);
+            }
+        }
+
+        return callback(null, existing);
+    });
 };
 
 // -----------------------------------------------------------------------------
