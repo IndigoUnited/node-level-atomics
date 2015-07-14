@@ -1,0 +1,29 @@
+{
+  "name": "node-level-atomics",
+  "version": "1.0.0",
+  "description": "Atomic operators for leveldb",
+
+  "main": "index.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "mocha",
+    "test-cov": "istanbul cover --dir test/coverage _mocha && echo open test/coverage/lcov-report/index.html",
+    "test-reload": "nodemon -w ./ -x \"npm t\""
+  },
+  "author": "Marco Oliveira",
+  "keywords": [
+    "level",
+    "leveldb",
+    "level-db",
+    "increment",
+    "decrement",
+    "counter",
+    "count",
+    "lock",
+    "replace",
+    "insert"
+  ],
+  "license": "MIT"
+}
