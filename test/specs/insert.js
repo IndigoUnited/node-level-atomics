@@ -20,7 +20,7 @@ module.exports = function () {
             db.get('some_key', function (err, res) {
                 __throw(err);
 
-                expect(res).to.be('now exists');
+                expect(res.some_key).to.be('now exists');
 
                 return done();
             });
@@ -38,12 +38,7 @@ module.exports = function () {
             expect(existing).to.not.contain('some_key2');
             expect(existing.length).to.be(0);
 
-            var tasks = {};
-
-            tasks.some_key1 = db.get.bind(db, 'some_key1');
-            tasks.some_key2 = db.get.bind(db, 'some_key2');
-
-            async.parallel(tasks, function (err, res) {
+            db.get(['some_key1', 'some_key2'], function (err, res) {
                 expect(res.some_key1).to.be('now exists1');
                 expect(res.some_key2).to.be('now exists2');
             });
@@ -85,7 +80,7 @@ module.exports = function () {
             db.get('some_key', function (err, res) {
                 __throw(err);
 
-                expect(res).to.be(valueInserted);
+                expect(res.some_key).to.be(valueInserted);
 
                 return done();
             });
@@ -104,7 +99,7 @@ module.exports = function () {
             db.get('some_key', function (err, res) {
                 __throw(err);
 
-                expect(res).to.be('now exists');
+                expect(res.some_key).to.be('now exists');
 
                 db.insert({
                     some_key: 'should not insert this'
@@ -131,12 +126,7 @@ module.exports = function () {
             expect(existing).to.not.contain('some_key2');
             expect(existing.length).to.be(0);
 
-            var tasks = {};
-
-            tasks.some_key1 = db.get.bind(db, 'some_key1');
-            tasks.some_key2 = db.get.bind(db, 'some_key2');
-
-            async.parallel(tasks, function (err, res) {
+            db.get(['some_key1', 'some_key2'], function (err, res) {
                 __throw(err);
 
                 expect(res.some_key1).to.be('now exists1');
@@ -170,7 +160,7 @@ module.exports = function () {
             db.get('some_key1', function (err, res) {
                 __throw(err);
 
-                expect(res).to.be('now exists1');
+                expect(res.some_key1).to.be('now exists1');
 
                 db.insert({
                     some_key1: 'should not insert 1',

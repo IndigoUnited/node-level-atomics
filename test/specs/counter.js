@@ -80,8 +80,8 @@ module.exports = function () {
         async.parallel(tasks, function (err) {
             __throw(err);
 
-            db.get('mycounter', function (err, value) {
-                expect(value).to.be(total * delta);
+            db.get('mycounter', function (err, res) {
+                expect(res.mycounter).to.be(total * delta);
 
                 return done();
             });

@@ -1,7 +1,6 @@
 'use strict';
 
 var expect  = require('expect.js');
-var async   = require('async');
 var __throw = require('../util/__throw');
 var db      = require('../util/db');
 
@@ -25,7 +24,7 @@ module.exports = function () {
                 db.get('some_key', function (err, res) {
                     __throw(err);
 
-                    expect(res).to.be('has been replaced');
+                    expect(res.some_key).to.be('has been replaced');
 
                     return done();
                 });
@@ -50,12 +49,7 @@ module.exports = function () {
             }, function (err) {
                 __throw(err);
 
-                var tasks = {};
-
-                tasks.some_key1 = db.get.bind(db, 'some_key1');
-                tasks.some_key2 = db.get.bind(db, 'some_key2');
-
-                async.parallel(tasks, function (err, res) {
+                db.get(['some_key1', 'some_key2'], function (err, res) {
                     expect(res.some_key1).to.be('has been replaced1');
                     expect(res.some_key2).to.be('has been replaced2');
                 });
@@ -74,9 +68,12 @@ module.exports = function () {
             expect(misses).to.contain('some_key');
             expect(misses.length).to.be(1);
 
-            db.get('some_key', function (err, res) {
-                expect(err).to.be.ok();
-                expect(err.notFound).to.be(true);
+            db.get('some_key', function (err, res, misses) {
+                __throw(err);
+
+                expect(res.some_key).to.not.be.ok();
+                expect(misses).to.contain('some_key');
+                expect(misses.length).to.be(1);
 
                 return done();
             });
@@ -95,20 +92,16 @@ module.exports = function () {
             expect(misses.length).to.be(2);
 
 
-            db.get('some_key1', function (err, res) {
-                expect(err).to.be.ok();
+            db.get(['some_key1', 'some_key2'], function (err, res, misses) {
+                __throw(err);
 
-                expect(err.notFound).to.be(true);
+                expect(res.some_key1).to.not.be.ok();
+                expect(res.some_key2).to.not.be.ok();
+                expect(misses).to.contain('some_key1');
+                expect(misses).to.contain('some_key2');
+                expect(misses.length).to.be(2);
 
-                db.get('some_key2', function (err, res) {
-                    expect(err).to.be.ok();
-
-                    expect(err.notFound).to.be(true);
-                    expect(err.notFound).to.be(true);
-
-                    return done();
-
-                });
+                return done();
             });
         });
     });
@@ -117,7 +110,7 @@ module.exports = function () {
         db.insert({
             some_key1: 'now exists1',
             some_key2: 'now exists2'
-        }, function (err, misses) {
+        }, function (err) {
             __throw(err);
 
             db.replace({
@@ -131,23 +124,21 @@ module.exports = function () {
                 expect(misses).to.not.contain('some_key2');
                 expect(misses).to.contain('some_key3');
 
-                db.get('some_key1', function (err, res) {
+                db.get(['some_key1', 'some_key2', 'some_key3'], function (err, res, misses) {
                     __throw(err);
 
-                    expect(res).to.be('has been replaced1');
+                    expect(res.some_key1).to.be.ok();
+                    expect(res.some_key2).to.be.ok();
+                    expect(res.some_key3).to.not.be.ok();
+                    expect(misses).to.not.contain('some_key1');
+                    expect(misses).to.not.contain('some_key2');
+                    expect(misses).to.contain('some_key3');
+                    expect(misses.length).to.be(1);
 
-                    db.get('some_key2', function (err, res) {
-                        __throw(err);
+                    expect(res.some_key1).to.be('has been replaced1');
+                    expect(res.some_key2).to.be('has been replaced2');
 
-                        expect(res).to.be('has been replaced2');
-
-                        db.get('some_key3', function (err, res) {
-                            expect(err).to.be.ok();
-                            expect(err.notFound).to.be(true);
-
-                            return done();
-                        });
-                    });
+                    return done();
                 });
             });
         });

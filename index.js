@@ -9,6 +9,11 @@ var kvOps = {};
 function wrap(db) {
     // mix in the methods
     for (var k in kvOps) {
+        // some methods overlap, save the original ones under '_' + method
+        if (db[k]) {
+            db['_' + k] = db[k];
+        }
+
         db[k] = kvOps[k];
     }
 
@@ -30,8 +35,7 @@ kvOps.counter = function (keys, delta, options, callback) {
     var tasks = {};
 
     _array(keys).forEach(function (key) {
-        tasks[key] = __lockAndGet.bind(null, this, key, options, function __handle(value, callback) {
-// console.log('locked:', key);
+        tasks[key] = _lockAndGet.bind(null, this, key, options, function __handle(value, callback) {
             // if no value, use 0 as initial
             if (value === undefined) {
                 value = 0;
@@ -52,9 +56,37 @@ kvOps.counter = function (keys, delta, options, callback) {
     async.parallel(tasks, callback);
 };
 
-// kvOps.get = function (keys, options, callback) {
+kvOps.get = function (keys, options, callback) {
+    if (typeof options === 'function') {
+        callback = options;
+        options  = {};
+    }
 
-// };
+    var tasks = {};
+
+    _array(keys).forEach(function (key) {
+        tasks[key] = _get.bind(null, this, key, options);
+    }.bind(this));
+
+    async.parallel(tasks, function __handleGets(err, res) {
+        if (err) {
+            return callback(err);
+        }
+
+        var misses   = [];
+        var finalRes = {};
+
+        for (var k in res) {
+            if (res[k] === undefined) {
+                misses.push(k);
+            } else {
+                finalRes[k] = res[k];
+            }
+        }
+
+        return callback(null, finalRes, misses);
+    });
+};
 
 kvOps.insert = function (tuples, options, callback) {
     if (typeof options === 'function') {
@@ -65,7 +97,7 @@ kvOps.insert = function (tuples, options, callback) {
     var tasks = {};
 
     _array(Object.keys(tuples)).forEach(function (key) {
-        tasks[key] = __lockAndGet.bind(null, this, key, options, function __handle(value, callback) {
+        tasks[key] = _lockAndGet.bind(null, this, key, options, function __handle(value, callback) {
             // if value already exists, insert fails
             if (value !== undefined) {
                 return callback(null, true); // key already existed
@@ -111,7 +143,7 @@ kvOps.replace = function (tuples, options, callback) {
     var tasks = {};
 
     _array(Object.keys(tuples)).forEach(function (key) {
-        tasks[key] = __lockAndGet.bind(null, this, key, options, function __handle(value, callback) {
+        tasks[key] = _lockAndGet.bind(null, this, key, options, function __handle(value, callback) {
             // if value does not exist, replace fails
             if (value === undefined) {
                 return callback(null, true); // key missing
@@ -146,22 +178,29 @@ kvOps.replace = function (tuples, options, callback) {
 
 // -----------------------------------------------------------------------------
 
-function __lockAndGet(db, key, options, handler, callback) {
-// console.log('locking:', key);
+function _lockAndGet(db, key, options, handler, callback) {
     db._lock(key, function __handleLock(release) {
-// console.log('obtained lock:', key);
-        db.get(key, options, function __handleGet(err, value) {
-// console.log('__handleGet', arguments);
+        db.get(key, options, function __handleGet(err, res) {
             if (err) {
-                if (!err.notFound) {
-                    return callback(err);
-                } else {
-                    value = undefined;
-                }
+                return callback(err);
             }
 
-            return handler(value, release(callback));
+            return handler(res[key], release(callback));
         });
+    });
+}
+
+function _get(db, key, options, callback) {
+    db._get(key, options, function __handleGet(err, res) {
+        if (err) {
+            if (err.notFound) {
+                return callback(null, undefined);
+            }
+
+            return callback(err);
+        }
+
+        return callback(null, res);
     });
 }
 

@@ -5,6 +5,7 @@ var db = require('./util/db');
 var counterSpecs = require('./specs/counter');
 var insertSpecs  = require('./specs/insert');
 var replaceSpecs = require('./specs/replace');
+var getSpecs     = require('./specs/get');
 
 // -----------------------------------------------------------------------------
 
@@ -21,6 +22,7 @@ afterEach(function (done) {
 describe('counter', counterSpecs);
 describe('insert',  insertSpecs);
 describe('replace', replaceSpecs);
+describe('get',     getSpecs);
 
 // -----------------------------------------------------------------------------
 
