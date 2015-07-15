@@ -12,6 +12,15 @@ Atomic operators for LevelDB.
 
 This module adds a bunch of typical atomic operations, like insert, replace and counter (increment/decrement) to LevelDB, and adds capacity to multiple parallel operations, like multi gets, multi inserts, and so on.
 
+### Core goals
+
+- All key-value operations should be *multi* friendly (support multiple operations in one call).
+- All added operations should be atomic.
+- Common operations should be easy to use, and not use `Error` for common, expected scenarios:
+    - `get`, `del` and `replace` don't return `Error` if keys don't exist, and instead provide an additional `misses` argument.
+    - `insert` doesn't return `Error` if key already exists, and instead provides an `existing` argument.
+    - `counter` always succeeds, even if key does not exist, and you can provide initial value for those cases.
+
 ```js
 var level   = require('level');
 var atomics = require('level-atomics');
@@ -50,14 +59,15 @@ db.counter({
 
 - [`append`](#db_append) *soon*
 - [`counter`](#db_counter)
+- [`del`](#db_del)
 - [`get`](#db_get)
 - [`insert`](#db_insert)
 - [`lock`](#db_lock) *soon*
 - [`prepend`](#db_prepend) *soon*
-- [`remove`](#db_remove) *soon*
+- [`put`](#db_put)
 - [`replace`](#db_replace)
-- [`unlock`](#db_unlock)
-- [`upsert`](#db_upsert) *soon*
+- [`unlock`](#db_unlock) *soon*
+- [`db`](#db_db)
 
 ---
 
@@ -69,10 +79,22 @@ Increments or decrements the keys' numeric value.
 Note that JavaScript does not support 64-bit integers. You might receive an inaccurate value if the number is greater than 53-bits (JavaScript's maximum integer precision).
 
 - `tuples`: tuple (object with keys and respective deltas).
-- `options`: same options as [level.put](https://github.com/Level/levelup#options-1).
-- `callback(err, results, cas, misses)`
+- `options`: Besides the same options as [level.put](https://github.com/Level/levelup#options-1), you have:
+    - `initial`: Initial value for the key if it does not exist (the actual value that will be used, not added to delta). Specifying a value of `undefined` will cause the operation to fail if key doesn't exist, otherwise this value must be equal to or greater than 0.
+- `callback(err, results, misses)`
     - `results`: object with keys and respective values.
     - `misses`: array of keys that don't exist.
+
+---
+
+<a name="db_del"></a>
+#### `counter(keys, [options,] callback) → db`
+
+Delete keys.
+
+- `keys`: array or string.
+- `options`: same options as [level.put](https://github.com/Level/levelup#options-3):
+- `callback(err)`
 
 ---
 
@@ -83,7 +105,7 @@ Retrieve keys.
 
 - `keys`: array or string.
 - `options`: same options as [level.get](https://github.com/Level/levelup#options-2).
-- `callback(err, results, cas, misses)`
+- `callback(err, results, misses)`
     - `results`: object with keys and respective values.
     - `misses`: array of keys that don't exist.
 
@@ -96,8 +118,19 @@ Will fail if the key already exists. Any key that already exists is returned in 
 
 - `tuples`: tuple (object with keys and respective values)
 - `options`: same options as [level.put](https://github.com/Level/levelup#options-1).
-- `callback(err, cas, existing)`
+- `callback(err, existing)`
     - `existing`: array of keys that already existed, and thus failed to be added.
+
+---
+
+<a name="db_put"></a>
+#### `insert(tuples, [options,] callback) → db`
+
+Put keys.
+
+- `tuples`: tuple (object with keys and respective values)
+- `options`: same options as [level.put](https://github.com/Level/levelup#options-1).
+- `callback(err)`
 
 ---
 
@@ -108,8 +141,15 @@ Identical to [`upsert`](#upsert), but will only succeed if the key exists alread
 
 - `tuples`: tuple (object with keys and respective values)
 - `options`: same options as [level.put](https://github.com/Level/levelup#options-1).
-- `callback(err, cas, misses)`
+- `callback(err, misses)`
     - `misses`: array of keys that don't exist.
+
+---
+
+<a name="db_db"></a>
+#### `db → original db`
+
+This property is the original DB that was wrapped. Useful if, for some reason, you need to access it.
 
 ---
 

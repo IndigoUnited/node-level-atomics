@@ -8,54 +8,86 @@ var db      = require('../util/db');
 module.exports = function () {
     db = db.get();
 
-    it('should initialize single key with 0 when incrementing', function (done) {
+    it('should initialize single key with provided initial value when incrementing', function (done) {
         db.counter({
             'mycounter': 25
-        }, function (err, res) {
+        }, {
+            initial: 10
+        }, function (err, res, misses) {
             __throw(err);
 
-            expect(res.mycounter).to.be(25);
+            expect(res.mycounter).to.be(10);
+            expect(misses.length).to.be(0);
 
             return done();
         });
     });
 
-    it('should initialize single key with 0 when decrementing', function (done) {
+    it('should initialize single key with provided initial value when decrementing', function (done) {
         db.counter({
             'mycounter': -25
-        }, function (err, res) {
+        }, {
+            initial: -5
+        }, function (err, res, misses) {
             __throw(err);
 
-            expect(res.mycounter).to.be(-25);
+            expect(res.mycounter).to.be(-5);
+            expect(misses.length).to.be(0);
 
             return done();
         });
     });
 
-    it('should initialize multiple keys with 0', function (done) {
+    it('should initialize multiple keys with provided initial value', function (done) {
         db.counter({
-            mycounter1: 25,
+            mycounter1: 10,
             mycounter2: 10
-        }, function (err, res) {
+        }, {
+            initial: 5
+        }, function (err, res, misses) {
             __throw(err);
 
-            expect(res.mycounter1).to.be(25);
-            expect(res.mycounter2).to.be(10);
+            expect(res.mycounter1).to.be(5);
+            expect(res.mycounter2).to.be(5);
+            expect(misses.length).to.be(0);
 
             return done();
         });
     });
 
     it('should increment on existing key', function (done) {
-        db.put('mycounter', 10, function (err) {
+        db.put({ 'mycounter': 10 }, function (err) {
             __throw(err);
 
             db.counter({
                 mycounter: 25
-            }, function (err, res) {
+            }, function (err, res, misses) {
                 __throw(err);
 
                 expect(res.mycounter).to.be(35);
+                expect(misses.length).to.be(0);
+
+                return done();
+            });
+        });
+    });
+
+    it('should increment on multiple existing keys', function (done) {
+        db.put({
+            mycounter1: 10,
+            mycounter2: 5
+        }, function (err) {
+            __throw(err);
+
+            db.counter({
+                mycounter1: 25,
+                mycounter2: 2
+            }, function (err, res, misses) {
+                __throw(err);
+
+                expect(res.mycounter1).to.be(35);
+                expect(res.mycounter2).to.be(7);
+                expect(misses.length).to.be(0);
 
                 return done();
             });
@@ -63,7 +95,7 @@ module.exports = function () {
     });
 
     it('should decrement on existing key', function (done) {
-        db.put('mycounter', 25, function (err) {
+        db.put({ 'mycounter': 25 }, function (err) {
             __throw(err);
 
             db.counter({
@@ -87,6 +119,8 @@ module.exports = function () {
         for (var i = 1; i <= total; i++) {
             tasks.push(db.counter.bind(db, {
                 mycounter: delta
+            }, {
+                initial: delta
             }));
         }
 
@@ -95,6 +129,62 @@ module.exports = function () {
 
             db.get('mycounter', function (err, res) {
                 expect(res.mycounter).to.be(total * delta);
+
+                return done();
+            });
+        });
+    });
+
+    it('should return misses when increment non existent single key without initial value', function (done) {
+        db.counter({
+            mycounter: 1
+        }, function (err, res, misses) {
+            __throw(err);
+
+            expect(res.mycounter).to.not.be.ok();
+
+            expect(misses.length).to.be(1);
+            expect(misses).to.contain('mycounter');
+
+            return done();
+        });
+    });
+
+    it('should return misses when increment non existent multiple keys without initial value', function (done) {
+        db.counter({
+            mycounter1: 1,
+            mycounter2: 1,
+        }, function (err, res, misses) {
+            __throw(err);
+
+            expect(res.mycounter1).to.not.be.ok();
+            expect(res.mycounter2).to.not.be.ok();
+
+            expect(misses.length).to.be(2);
+            expect(misses).to.contain('mycounter1');
+            expect(misses).to.contain('mycounter2');
+
+            return done();
+        });
+    });
+
+    it('should return misses when only some keys do not exist', function (done) {
+        db.put({
+            mycounter1: 10
+        }, function (err) {
+            __throw(err);
+
+            db.counter({
+                mycounter1: 1,
+                mycounter2: 1,
+            }, function (err, res, misses) {
+                __throw(err);
+
+                expect(res.mycounter1).to.be(11);
+                expect(res.mycounter2).to.not.be.ok();
+
+                expect(misses.length).to.be(1);
+                expect(misses).to.contain('mycounter2');
 
                 return done();
             });

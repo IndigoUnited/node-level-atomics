@@ -1,6 +1,6 @@
 {
   "name": "level-atomics",
-  "version": "1.0.2",
+  "version": "2.0.0",
   "description": "Atomic operators for LevelDB",
   "main": "index.js",
   "directories": {
@@ -9,7 +9,8 @@
   "scripts": {
     "test": "mocha",
     "test-cov": "istanbul cover --dir test/coverage _mocha && echo open test/coverage/lcov-report/index.html",
-    "test-reload": "nodemon --ignore test/coverage -w ./ -x \"npm run test-cov\"",
+    "test-reload": "nodemon --ignore test/coverage -w ./ -x \"npm test\"",
+    "test-reload-cov": "nodemon --ignore test/coverage -w ./ -x \"npm run test-cov\"",
     "test-travis": "istanbul cover node_modules/.bin/_mocha --report lcovonly"
   },
   "author": "Marco Oliveira",
