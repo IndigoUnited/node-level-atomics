@@ -1,7 +1,7 @@
 {
   "name": "level-atomics",
-  "version": "2.0.1",
-  "description": "Atomic operators for LevelDB",
+  "version": "2.0.2",
+  "description": "Atomic and multi friendly operations for LevelDB",
   "main": "index.js",
   "directories": {
     "test": "test"
@@ -13,7 +13,11 @@
     "test-reload-cov": "nodemon --ignore test/coverage -w ./ -x \"npm run test-cov\"",
     "test-travis": "istanbul cover node_modules/.bin/_mocha --report lcovonly"
   },
-  "author": "Marco Oliveira",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/IndigoUnited/node-level-atomics.git"
+  },
+  "author": "Marco Oliveira <marcooliveira@me.com>",
   "keywords": [
     "level",
     "leveldb",
@@ -24,9 +28,14 @@
     "count",
     "lock",
     "replace",
-    "insert"
+    "insert",
+    "multi",
+    "multiple",
+    "atomic",
+    "locking"
   ],
   "license": "MIT",
+  "homepage": "https://github.com/IndigoUnited/node-level-atomics",
   "devDependencies": {
     "codacy-coverage": "^1.1.2",
     "coveralls": "^2.11.2",
