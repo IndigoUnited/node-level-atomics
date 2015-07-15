@@ -9,7 +9,8 @@
   "scripts": {
     "test": "mocha",
     "test-cov": "istanbul cover --dir test/coverage _mocha && echo open test/coverage/lcov-report/index.html",
-    "test-reload": "nodemon --ignore test/coverage -w ./ -x \"npm run test-cov\""
+    "test-reload": "nodemon --ignore test/coverage -w ./ -x \"npm run test-cov\"",
+    "test-travis": "istanbul cover node_modules/.bin/_mocha --report lcovonly"
   },
   "author": "Marco Oliveira",
   "keywords": [
