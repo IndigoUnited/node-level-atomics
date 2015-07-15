@@ -6,6 +6,7 @@ var counterSpecs = require('./specs/counter');
 var insertSpecs  = require('./specs/insert');
 var replaceSpecs = require('./specs/replace');
 var getSpecs     = require('./specs/get');
+var tupleSpecs   = require('./specs/tuple');
 
 // -----------------------------------------------------------------------------
 
@@ -23,6 +24,7 @@ describe('counter', counterSpecs);
 describe('insert',  insertSpecs);
 describe('replace', replaceSpecs);
 describe('get',     getSpecs);
+describe('tuple',   tupleSpecs);
 
 // -----------------------------------------------------------------------------
 

@@ -35,12 +35,12 @@ module.exports = function () {
     it('should initialize multiple keys with 0', function (done) {
         db.counter({
             mycounter1: 25,
-            mycounter2: 25
+            mycounter2: 10
         }, function (err, res) {
             __throw(err);
 
             expect(res.mycounter1).to.be(25);
-            expect(res.mycounter2).to.be(25);
+            expect(res.mycounter2).to.be(10);
 
             return done();
         });

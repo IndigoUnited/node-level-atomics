@@ -6,7 +6,7 @@ var async   = require('async');
 
 var kvOps = {};
 
-function wrap(db) {
+function atomics(db) {
     // mix in the methods
     for (var k in kvOps) {
         // some methods overlap, save the original ones under '_' + method
@@ -21,6 +21,8 @@ function wrap(db) {
 
     return db;
 }
+
+atomics.tuple = _tuple;
 
 // kvOps.append = function (keys, fragment, callback) {
 
@@ -54,6 +56,8 @@ kvOps.counter = function (tuples, options, callback) {
     }.bind(this));
 
     async.parallel(tasks, callback);
+
+    return this;
 };
 
 kvOps.get = function (keys, options, callback) {
@@ -86,6 +90,8 @@ kvOps.get = function (keys, options, callback) {
 
         return callback(null, finalRes, misses);
     });
+
+    return this;
 };
 
 kvOps.insert = function (tuples, options, callback) {
@@ -128,6 +134,8 @@ kvOps.insert = function (tuples, options, callback) {
 
         return callback(null, existing);
     });
+
+    return this;
 };
 
 // kvOps.prepend = function (keys, fragment, callback) {
@@ -174,6 +182,8 @@ kvOps.replace = function (tuples, options, callback) {
 
         return callback(null, existing);
     });
+
+    return this;
 };
 
 // -----------------------------------------------------------------------------
@@ -208,4 +218,22 @@ function _array(x) {
     return isArray(x) ? x : [x];
 }
 
-module.exports = wrap;
+function _tuple(k, v) {
+    var res = {};
+
+    // if it's a set of keys and respective values
+    if (isArray(k)) {
+        for (var i = k.length - 1; i >= 0; i--) {
+            res[k[i]] = v[i];
+        }
+
+        return res;
+    }
+
+    // just a key and a value
+    res[k] = v;
+
+    return res;
+}
+
+module.exports = atomics;
