@@ -4,6 +4,15 @@ Atomic operators for LevelDB.
 
 [![Build Status](https://travis-ci.org/IndigoUnited/node-level-atomics.svg?branch=master)](https://travis-ci.org/IndigoUnited/node-level-atomics) [![Coverage Status](https://coveralls.io/repos/IndigoUnited/node-level-atomics/badge.svg)](https://coveralls.io/r/IndigoUnited/node-level-atomics) [![Codacy Badge](https://www.codacy.com/project/badge/97a9d41428694d1a978dedb9b36037c7)](https://www.codacy.com/app/me_19/node-level-atomics)
 
+Coverage summary:
+
+```
+Statements   : 93.08% ( 148/159 )
+Branches     : 75.81% ( 47/62 )
+Functions    : 100% ( 33/33 )
+Lines        : 93.08% ( 148/159 )
+```
+
 ## Installing
 
 `npm install level-atomics`
@@ -15,9 +24,9 @@ This module adds a bunch of typical atomic operations, like insert, replace and 
 ### Core goals
 
 - All key-value operations should be *multi* friendly (support multiple operations in one call).
-- All added operations should be atomic.
+- All new operations should be atomic.
 - Common operations should be easy to use, and not use `Error` for common, expected scenarios:
-    - `get`, `del` and `replace` don't return `Error` if keys don't exist, and instead provide an additional `misses` argument.
+    - `get` and `replace` don't return `Error` if keys don't exist, and instead provide an additional `misses` argument.
     - `insert` doesn't return `Error` if key already exists, and instead provides an `existing` argument.
     - `counter` always succeeds, even if key does not exist, and you can provide initial value for those cases.
 
@@ -45,6 +54,8 @@ db.get(['a', 'b', 'c'], function (err, res, misses) {
 
 db.counter({
     some_key: 10
+}, {
+    initial: 10
 }, function (err, res, misses) {
     if (err) {
         return console.error('Something went wrong:', err);
