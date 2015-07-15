@@ -69,7 +69,7 @@ Increments or decrements the keys' numeric value.
 Note that JavaScript does not support 64-bit integers. You might receive an inaccurate value if the number is greater than 53-bits (JavaScript's maximum integer precision).
 
 - `tuples`: tuple (object with keys and respective deltas).
-- `options`: same options as (level.put)[https://github.com/Level/levelup#options-1].
+- `options`: same options as [level.put](https://github.com/Level/levelup#options-1).
 - `callback(err, results, cas, misses)`
     - `results`: object with keys and respective values.
     - `misses`: array of keys that don't exist.
@@ -82,7 +82,7 @@ Note that JavaScript does not support 64-bit integers. You might receive an inac
 Retrieve keys.
 
 - `keys`: array or string.
-- `options`: same options as (level.get)[https://github.com/Level/levelup#options-2].
+- `options`: same options as [level.get](https://github.com/Level/levelup#options-2).
 - `callback(err, results, cas, misses)`
     - `results`: object with keys and respective values.
     - `misses`: array of keys that don't exist.
@@ -95,7 +95,7 @@ Retrieve keys.
 Will fail if the key already exists. Any key that already exists is returned in the callback in the `existing` parameter.
 
 - `tuples`: tuple (object with keys and respective values)
-- `options`: same options as (level.put)[https://github.com/Level/levelup#options-1].
+- `options`: same options as [level.put](https://github.com/Level/levelup#options-1).
 - `callback(err, cas, existing)`
     - `existing`: array of keys that already existed, and thus failed to be added.
 
@@ -107,7 +107,7 @@ Will fail if the key already exists. Any key that already exists is returned in 
 Identical to [`upsert`](#upsert), but will only succeed if the key exists already (i.e. the inverse of [`insert`](#insert)).
 
 - `tuples`: tuple (object with keys and respective values)
-- `options`: same options as (level.put)[https://github.com/Level/levelup#options-1].
+- `options`: same options as [level.put](https://github.com/Level/levelup#options-1).
 - `callback(err, cas, misses)`
     - `misses`: array of keys that don't exist.
 
