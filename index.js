@@ -26,7 +26,7 @@ function wrap(db) {
 
 // };
 
-kvOps.counter = function (keys, delta, options, callback) {
+kvOps.counter = function (tuples, options, callback) {
     if (typeof options === 'function') {
         callback = options;
         options  = {};
@@ -34,14 +34,14 @@ kvOps.counter = function (keys, delta, options, callback) {
 
     var tasks = {};
 
-    _array(keys).forEach(function (key) {
+    _array(Object.keys(tuples)).forEach(function (key) {
         tasks[key] = _lockAndGet.bind(null, this, key, options, function __handle(value, callback) {
             // if no value, use 0 as initial
             if (value === undefined) {
                 value = 0;
             }
 
-            var newValue = value + delta;
+            var newValue = parseInt(value, 10) + tuples[key];
 
             this.put(key, newValue, options, function __handlePut(err) {
                 if (err) {
