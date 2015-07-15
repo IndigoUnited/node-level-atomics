@@ -104,7 +104,7 @@ Note that JavaScript does not support 64-bit integers. You might receive an inac
 Delete keys.
 
 - `keys`: array or string.
-- `options`: same options as [level.put](https://github.com/Level/levelup#options-3):
+- `options`: same options as [level.del](https://github.com/Level/levelup#options-3):
 - `callback(err)`
 
 ---
