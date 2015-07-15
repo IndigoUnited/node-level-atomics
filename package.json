@@ -1,5 +1,5 @@
 {
-  "name": "node-level-atomics",
+  "name": "level-atomics",
   "version": "1.0.0",
   "description": "Atomic operators for LevelDB",
   "main": "index.js",
