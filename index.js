@@ -30,6 +30,9 @@ function atomics(db) {
 
     atomicsDb._lock = new Lock();
 
+    // used to speed up concurrent increments
+    atomicsDb._counters = {};
+
     return atomicsDb;
 }
 
@@ -45,9 +48,8 @@ kvOps.counter = function (tuples, options, callback) {
         options  = {};
     }
 
-    var tasks = {};
-
-    var initial;
+    var tasks = {},
+        initial;
 
     if (options.hasOwnProperty('initial')) {
         initial = options.initial;
@@ -55,32 +57,72 @@ kvOps.counter = function (tuples, options, callback) {
     }
 
     _array(Object.keys(tuples)).forEach(function (key) {
-        tasks[key] = _lockAndGet.bind(null, this, key, options, function __handle(value, callback) {
-            var newValue;
+        var committer = false;
 
-            // if no value, use initial
-            if (value === undefined) {
-                // if no initial value, this is a miss
-                if (initial === undefined) {
-                    return callback(null, undefined);
-                }
+        // if there isn't another batch handling the counter, this will be the
+        // committer for this key
+        if (!this._counters[key]) {
+            // init batch
+            this._counters[key] = [];
 
-                // if there is an initial value, use it
-                newValue = initial;
-            } else {
-                // there is a value, sum it to the provided value
-                newValue = parseInt(value, 10) + tuples[key];
-            }
+            committer = true;
+        }
 
-            this._put(key, newValue, options, function __handlePut(err) {
-                if (err) {
-                    return callback(err);
-                }
+        var batch = this._counters[key];
 
-                return callback(null, newValue);
+        // create async tasks
+        tasks[key] = function __signalCounter(callback) {
+            // add this entry to batch
+            var batchPosition = batch.push({
+                delta:    parseInt(tuples[key], 10),
+                callback: callback
             });
-        }.bind(this));
+            batchPosition--; // fix 0 indexed position
+
+            // if this is the committer for the key, prepare to update it
+            if (committer) {
+                // get the key
+                this._get(key, options, function __handleGet(err, oldValue) {
+                    if (err && !err.notFound) {
+                        return callback(err);
+                    }
+
+                    // if no oldValue, use initial
+                    var newValue = (oldValue === undefined) ? initial : parseInt(oldValue, 10) + tuples[key]; // TODO: make initial required in doc
+
+                    // remove batch
+                    delete this._counters[key];
+
+                    var tmp = newValue;
+
+                    var callbacks = [];
+
+                    // prepare to call back others waiting, including own callback
+                    callbacks.push(batch[0].callback.bind(null, null, tmp));
+
+                    for (var i = 1; i < batch.length; i++) {
+                        tmp += batch[i].delta;
+
+                        callbacks.push(batch[i].callback.bind(null, null, tmp));
+                    }
+
+                    // update the key
+                    this._put(key, tmp, options, function __handlePut(err) {
+                        if (err) {
+                            return callback(err);
+                        }
+
+                        // callback everyone waiting
+                        for (var i = 0; i < callbacks.length; i++) {
+                            setImmediate(callbacks[i]);
+                        }
+                    });
+                }.bind(this));
+            }
+        }.bind(this);
     }.bind(this));
+
+    // console.log('executing', tasks);
 
     async.parallel(tasks, function __handleGets(err, res) {
         if (err) {

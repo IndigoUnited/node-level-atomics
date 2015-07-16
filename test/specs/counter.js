@@ -190,4 +190,68 @@ module.exports = function () {
             });
         });
     });
+
+    it('should be fast incrementing in parallel', function (done) {
+        this.timeout(500);
+        var tasks = [];
+
+        var total = 10000,
+            delta = 1;
+
+        for (var i = 1; i <= total; i++) {
+            tasks.push(db.counter.bind(db, {
+                mycounter: delta
+            }, {
+                initial: delta
+            }));
+        }
+
+        // console.time('counter');
+        async.parallel(tasks, function (err) {
+            // console.timeEnd('counter');
+            __throw(err);
+
+            db.get('mycounter', function (err, res) {
+                expect(res.mycounter).to.be(total * delta);
+
+                return done();
+            });
+        });
+    });
+
+    it('should be fast incrementing in parallel', function (done) {
+        var tasks = [];
+
+        var total = 10000,
+            delta = 1;
+
+        for (var i = 1; i <= total; i++) {
+            tasks.push(db.counter.bind(db, {
+                mycounter: delta
+            }, {
+                initial: delta
+            }));
+        }
+
+        var multiplierTasks = [
+            async.parallel.bind(null, tasks),
+            async.parallel.bind(null, tasks),
+            async.parallel.bind(null, tasks),
+            async.parallel.bind(null, tasks),
+            async.parallel.bind(null, tasks)
+        ];
+
+        // console.time('counter');
+        async.parallel(multiplierTasks, function (err) {
+            // console.timeEnd('counter');
+            __throw(err);
+
+            db.get('mycounter', function (err, res) {
+                expect(res.mycounter).to.be(total * delta * multiplierTasks.length);
+
+                return done();
+            });
+        });
+    });
+
 };
