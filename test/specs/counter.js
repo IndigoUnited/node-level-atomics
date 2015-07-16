@@ -192,7 +192,8 @@ module.exports = function () {
     });
 
     it('should be fast incrementing in parallel', function (done) {
-        this.timeout(500);
+        this.timeout(1000);
+
         var tasks = [];
 
         var total = 10000,
@@ -220,6 +221,8 @@ module.exports = function () {
     });
 
     it('should be fast incrementing in parallel', function (done) {
+        this.timeout(2000);
+
         var tasks = [];
 
         var total = 10000,
