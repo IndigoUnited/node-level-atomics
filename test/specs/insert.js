@@ -193,7 +193,7 @@ module.exports = function () {
         console.time('insert');
         async.parallel(tasks, function (err, res) {
             var x = console.timeEnd('insert');
-console.log('x', x);
+
             __throw(err);
 
             var totalExisting = 0,
