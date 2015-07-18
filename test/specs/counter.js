@@ -192,6 +192,7 @@ module.exports = function () {
     });
 
     it('should be atomic', function (done) {
+        this.timeout(0);
         var tasks = [];
 
         var total = 10000,
@@ -219,6 +220,7 @@ module.exports = function () {
     });
 
     it('should be atomic in chaos', function (done) {
+        this.timeout(0);
         var tasks = [];
 
         var total1 = 10000,

@@ -1,6 +1,6 @@
 {
   "name": "level-atomics",
-  "version": "2.1.1",
+  "version": "2.1.2",
   "description": "Atomic and multi friendly operations for LevelDB",
   "main": "index.js",
   "directories": {
