@@ -178,7 +178,7 @@ module.exports = function () {
         });
     });
 
-    it.only('should be atomic and fast', function (done) {
+    it('should be atomic and fast', function (done) {
         this.timeout(0);
 
         var tasks = {};
@@ -192,7 +192,7 @@ module.exports = function () {
         }
         console.time('insert');
         async.parallel(tasks, function (err, res) {
-            var x = console.timeEnd('insert');
+            console.timeEnd('insert');
 
             __throw(err);
 
