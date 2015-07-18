@@ -75,7 +75,7 @@ kvOps.counter = function (tuples, options, callback) {
 
             var batch = this._counters[key];
 
-            var batchPosition = batch.length;
+            batch.length;
 
             // add this entry to batch
             batch.push({
@@ -366,20 +366,6 @@ function _lockAndGet(db, key, options, handler, callback) {
 
             return handler(res[key], release(callback));
         });
-    });
-}
-
-function _get(db, key, options, callback) {
-    db._get(key, options, function __handleGet(err, res) {
-        if (err) {
-            if (err.notFound) {
-                return callback(null, undefined);
-            }
-
-            return callback(err);
-        }
-
-        return callback(null, res);
     });
 }
 
