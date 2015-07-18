@@ -3,6 +3,7 @@
 var expect  = require('expect.js');
 var __throw = require('../util/__throw');
 var db      = require('../util/db');
+var async   = require('async');
 
 module.exports = function () {
     db = db.get();
@@ -79,4 +80,34 @@ module.exports = function () {
             });
         });
     });
+
+    it('should aggregate gets', function (done) {
+        db.insert({
+            some_key1: 'some_value1',
+            some_key2: 'some_value2',
+            some_key3: 'some_value3',
+        }, function (err) {
+            __throw(err);
+
+            var tasks = [];
+            var total = 1000;
+
+            for (var i = 0; i < total; i++) {
+                tasks.push(db.get.bind(db, ['some_key1', 'some_key2']));
+            }
+console.time('get');
+            async.parallel(tasks, function (err, res) {
+                __throw(err);
+console.timeEnd('get');
+                res.forEach(function (res) {
+                    expect(res[0].some_key1).to.be('some_value1');
+                    expect(res[0].some_key2).to.be('some_value2');
+                    expect(res[1].length).to.be(0);
+                });
+
+                return done();
+            });
+        });
+    });
+
 };

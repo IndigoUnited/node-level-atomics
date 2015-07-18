@@ -33,6 +33,9 @@ function atomics(db) {
     // used to speed up concurrent increments
     atomicsDb._counters = {};
 
+    // used to speedup concurrent gets of the same key
+    atomicsDb._fetchers = {};
+
     return atomicsDb;
 }
 
@@ -57,36 +60,35 @@ kvOps.counter = function (tuples, options, callback) {
     }
 
     _array(Object.keys(tuples)).forEach(function (key) {
-        var committer = false;
-
-        // if there isn't another batch handling the counter, this will be the
-        // committer for this key
-        if (!this._counters[key]) {
-            // init batch
-            this._counters[key] = [];
-
-            committer = true;
-        }
-
-        var batch = this._counters[key];
-
         // create async tasks
-        tasks[key] = function __signalCounter(callback) {
+        tasks[key] = function __tryCounter(callback) {
+            var committer = false;
+
+            // if there isn't another batch handling the counter, this will be the
+            // committer for this key
+            if (!this._counters[key]) {
+                // init batch
+                this._counters[key] = [];
+
+                committer = true;
+            }
+
+            var batch = this._counters[key];
+
+            var batchPosition = batch.length;
+
             // add this entry to batch
-            var batchPosition = batch.push({
+            batch.push({
                 delta:    parseInt(tuples[key], 10),
-                callback: callback
+                callback: function (err, value) {
+                    callback(err, value);
+                }
             });
-            batchPosition--; // fix 0 indexed position
 
             // if this is the committer for the key, prepare to update it
             if (committer) {
-                // get the key
-                this._get(key, options, function __handleGet(err, oldValue) {
-                    if (err && !err.notFound) {
-                        return callback(err);
-                    }
-
+                // lock and get key
+                _lockAndGet(this, key, options, function __handleLockAndGet(oldValue, callback) {
                     // if no oldValue, use initial
                     var newValue = (oldValue === undefined) ? initial : parseInt(oldValue, 10) + tuples[key]; // TODO: make initial required in doc
 
@@ -95,28 +97,41 @@ kvOps.counter = function (tuples, options, callback) {
 
                     var tmp = newValue;
 
-                    var callbacks = [];
-
                     // prepare to call back others waiting, including own callback
-                    callbacks.push(batch[0].callback.bind(null, null, tmp));
+                    batch[0].err   = null;
+                    batch[0].value = tmp;
 
                     for (var i = 1; i < batch.length; i++) {
                         tmp += batch[i].delta;
 
-                        callbacks.push(batch[i].callback.bind(null, null, tmp));
+                        batch[i].err   = null;
+                        batch[i].value = tmp;
                     }
 
                     // update the key
                     this._put(key, tmp, options, function __handlePut(err) {
                         if (err) {
-                            return callback(err);
+                            return callback(err, true); // true to signal to keep any current batch, since it's a new batch
                         }
 
-                        // callback everyone waiting
-                        for (var i = 0; i < callbacks.length; i++) {
-                            setImmediate(callbacks[i]);
-                        }
+                        _callbackCounters(this, batch);
+
+                        // all done
+                        return callback();
                     });
+                }.bind(this), function __handleCounterUpdate(err, keepBatch) {
+                    if (err) {
+                        for (var i = 0; i < batch.length; i++) {
+                            batch[i].err   = err;
+                            batch[i].value = undefined;
+                        }
+
+                        if (!keepBatch) {
+                            delete this._counters[key];
+                        }
+
+                        return _callbackCounters(this, batch);
+                    }
                 }.bind(this));
             }
         }.bind(this);
@@ -180,7 +195,8 @@ kvOps.get = function (keys, options, callback) {
     var tasks = {};
 
     _array(keys).forEach(function (key) {
-        tasks[key] = _get.bind(null, this, key, options);
+        // tasks[key] = _get.bind(null, this, key, options);
+        tasks[key] = _collapseGet.bind(null, this, key, options);
     }.bind(this));
 
     async.parallel(tasks, function __handleGets(err, res) {
@@ -214,20 +230,39 @@ kvOps.insert = function (tuples, options, callback) {
     var tasks = {};
 
     _array(Object.keys(tuples)).forEach(function (key) {
-        tasks[key] = _lockAndGet.bind(null, this, key, options, function __handle(value, callback) {
-            // if value already exists, insert fails
-            if (value !== undefined) {
-                return callback(null, true); // key already existed
-            }
-
-            this._put(key, tuples[key], options, function __handlePut(err) {
+        tasks[key] = function __tryInsert(callback) {
+            // start by quickly checking if the key exists and give up before
+            // trying to lock it
+            this.get(key, options, function __handleGet(err, res) {
                 if (err) {
                     return callback(err);
                 }
 
-                return callback(null, false); // key did not exist
-            });
-        }.bind(this));
+                var value = res[key];
+
+                // if key already exists, give up
+                if (value !== undefined) {
+                    return callback(null, true); // key already existed
+                }
+
+                // there is a strong chance that the key does not exist, let's
+                // lock and get it
+                _lockAndGet(this, key, options, function __handle(value, callback) {
+                    // if value already exists, insert fails
+                    if (value !== undefined) {
+                        return callback(null, true); // key already existed
+                    }
+
+                    this._put(key, tuples[key], options, function __handlePut(err) {
+                        if (err) {
+                            return callback(err);
+                        }
+
+                        return callback(null, false); // key did not exist
+                    });
+                }.bind(this), callback);
+            }.bind(this));
+        }.bind(this);
     }.bind(this));
 
     async.parallel(tasks, function __handleInserts(err, res) {
@@ -348,6 +383,37 @@ function _get(db, key, options, callback) {
     });
 }
 
+function _collapseGet(db, key, options, callback) {
+    var fetcher = false;
+
+    // if there isn't another batch fetching the key, this will be the
+    // fetcher for this key
+    if (!db._fetchers[key]) {
+        // init batch
+        db._fetchers[key] = [];
+
+        fetcher = true;
+    }
+
+    var batch = db._fetchers[key];
+
+    // add this callback to batch
+    var batchPosition = batch.push(callback);
+    batchPosition--; // fix 0 indexed position
+
+    // if this is the fetcher for the key, prepare to get it
+    if (fetcher) {
+        // get the key
+        db._get(key, options, function __handleGet(err, value) {
+            if (err && !err.notFound) {
+                return _callbackGets(db, key, err);
+            }
+
+            return _callbackGets(db, key, null, value);
+        });
+    }
+}
+
 function _array(x) {
     return isArray(x) ? x : [x];
 }
@@ -368,6 +434,27 @@ function _tuple(k, v) {
     res[k] = v;
 
     return res;
+}
+
+function _callbackCounters(db, batch) {
+    for (var i = 0; i < batch.length; i++) {
+        setImmediate(batch[i].callback, batch[i].err, batch[i].value);
+    }
+
+    return;
+}
+
+function _callbackGets(db, key, err, value) {
+    var batch = db._fetchers[key];
+
+    for (var i = 0; i < batch.length; i++) {
+        setImmediate(batch[i], err, value);
+    }
+
+    // remove batch
+    delete db._fetchers[key];
+
+    return;
 }
 
 module.exports = atomics;

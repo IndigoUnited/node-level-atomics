@@ -177,4 +177,49 @@ module.exports = function () {
             });
         });
     });
+
+    it.only('should be atomic and fast', function (done) {
+        this.timeout(0);
+
+        var tasks = {};
+
+        var total = 10000;
+
+        for (var i = 0; i < total; i++) {
+            tasks[i] = db.insert.bind(db, {
+                'some_key': i
+            });
+        }
+        console.time('insert');
+        async.parallel(tasks, function (err, res) {
+            var x = console.timeEnd('insert');
+console.log('x', x);
+            __throw(err);
+
+            var totalExisting = 0,
+                totalInserted = 0,
+                valueInserted;
+
+            for (var k in res) {
+                if (res[k].length) {
+                    totalExisting += res[k].length;
+                } else {
+                    totalInserted++;
+                    valueInserted = parseInt(k, 10);
+                }
+            }
+
+            expect(totalExisting).to.be(total - 1);
+            expect(totalInserted).to.be(1);
+
+            db.get('some_key', function (err, res) {
+                __throw(err);
+
+                expect(res.some_key).to.be(valueInserted);
+
+                return done();
+            });
+        });
+    });
+
 };

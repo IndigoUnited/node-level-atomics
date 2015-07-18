@@ -25,7 +25,7 @@ module.exports = function () {
 
     it('should initialize single key with provided initial value when decrementing', function (done) {
         db.counter({
-            'mycounter': -25
+            'mycounter': -1
         }, {
             initial: -5
         }, function (err, res, misses) {
@@ -191,9 +191,7 @@ module.exports = function () {
         });
     });
 
-    it('should be fast incrementing in parallel', function (done) {
-        this.timeout(1000);
-
+    it('should be atomic', function (done) {
         var tasks = [];
 
         var total = 10000,
@@ -220,19 +218,31 @@ module.exports = function () {
         });
     });
 
-    it('should be fast incrementing in parallel', function (done) {
-        this.timeout(2000);
-
+    it('should be atomic in chaos', function (done) {
         var tasks = [];
 
-        var total = 10000,
-            delta = 1;
+        var total1 = 10000,
+            total2 = 5000,
+            delta1 = 1,
+            delta2 = 10;
 
-        for (var i = 1; i <= total; i++) {
+        for (var i = 1; i <= total1; i++) {
             tasks.push(db.counter.bind(db, {
-                mycounter: delta
+                mycounter:           delta1,
+                some_other_counter1: delta2
             }, {
-                initial: delta
+                initial: delta1
+            }));
+        }
+
+        for (i = 1; i <= total2; i++) {
+            tasks.push(db.counter.bind(db, {
+                mycounter: delta1,
+                some_other_counter1: delta2,
+                some_other_counter2: delta2,
+                some_other_counter3: delta2
+            }, {
+                initial: delta2
             }));
         }
 
@@ -249,8 +259,16 @@ module.exports = function () {
             // console.timeEnd('counter');
             __throw(err);
 
-            db.get('mycounter', function (err, res) {
-                expect(res.mycounter).to.be(total * delta * multiplierTasks.length);
+            db.get([
+                'mycounter',
+                'some_other_counter1',
+                'some_other_counter2',
+                'some_other_counter3'
+            ], function (err, res) {
+                expect(res.mycounter).to.be((total1 + total2) * delta1 * multiplierTasks.length);
+                expect(res.some_other_counter1).to.be((total1 + total2) * delta2 * multiplierTasks.length - (delta2 - delta1));
+                expect(res.some_other_counter2).to.be(total2 * delta2 * multiplierTasks.length);
+                expect(res.some_other_counter3).to.be(total2 * delta2 * multiplierTasks.length);
 
                 return done();
             });
