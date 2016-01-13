@@ -90,7 +90,7 @@ Note that JavaScript does not support 64-bit integers. You might receive an inac
 ---
 
 <a name="db_del"></a>
-#### `counter(keys, [options,] callback) → db`
+#### `del(keys, [options,] callback) → db`
 
 Delete keys.
 
@@ -126,7 +126,7 @@ Will fail if the key already exists. Any key that already exists is returned in 
 ---
 
 <a name="db_put"></a>
-#### `insert(tuples, [options,] callback) → db`
+#### `put(tuples, [options,] callback) → db`
 
 Put keys.
 
@@ -139,7 +139,7 @@ Put keys.
 <a name="db_replace"></a>
 #### `replace(tuples, [options,] callback) → db`
 
-Identical to [`upsert`](#upsert), but will only succeed if the key exists already (i.e. the inverse of [`insert`](#insert)).
+Identical to [`put`](#put), but will only succeed if the key exists already (i.e. the inverse of [`insert`](#insert)).
 
 - `tuples`: tuple (object with keys and respective values)
 - `options`: same options as [level.put](https://github.com/Level/levelup#options-1).
